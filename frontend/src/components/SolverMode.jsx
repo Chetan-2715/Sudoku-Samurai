@@ -22,10 +22,10 @@ const SolverMode = ({ onBack }) => {
 
   const handleSolve = async () => {
     setSolving(true);
-    
+
     try {
       const result = await mockSolveSudoku(grid);
-      
+
       if (result.success) {
         setGrid(result.solution);
         setSolved(true);
@@ -69,9 +69,7 @@ const SolverMode = ({ onBack }) => {
             <Bot className="inline-block mr-2 h-6 w-6 text-cyan-400 align-middle" />
             Solve with the Bot
           </CardTitle>
-          <p className="solver-description">
-            Enter your Sudoku puzzle numbers below and let the AI samurai solve it instantly
-          </p>
+          <p className="solver-description">Enter your Sudoku puzzle numbers below and let the AI samurai solve it instantly</p>
         </CardHeader>
         <CardContent>
           <SudokuGrid

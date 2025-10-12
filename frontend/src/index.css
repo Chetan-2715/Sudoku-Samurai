@@ -84,3 +84,11 @@ code {
     @apply bg-background text-foreground;
     }
 }
+/* Solver / Guided mode title icon sizing — targeted defensive rule */
+.solver-title svg,
+.guided-title svg {
+width: 1.5rem !important; /* 24px */
+height: 1.5rem !important; /* 24px */
+display: inline-block;
+vertical-align: middle;
+}

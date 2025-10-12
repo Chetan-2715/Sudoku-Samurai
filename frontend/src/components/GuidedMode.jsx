@@ -115,7 +115,7 @@ const GuidedMode = ({ onBack }) => {
       <Card className="guided-card">
         <CardHeader>
           <CardTitle className="guided-title">
-            <Brain className="inline-block mr-2 h-2 w-2" />
+            <Brain className="inline-block mr-2 h-6 w-6 text-amber-400 align-middle" />
             Guided Mode
           </CardTitle>
           <p className="guided-description">
