@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Lightbulb, RotateCcw, CheckCircle2, Sparkles, Info } from 'lucide-react';
+import { ArrowLeft, Lightbulb, RotateCcw, CheckCircle2, Sparkles, Info, AlertTriangle } from 'lucide-react';
 import SudokuGrid from './SudokuGrid';
-import { getNextHint, analyzeCellDetails } from '../lib/guidedSolver';
-import { generatePuzzle } from '../lib/solver';
+import SizeSelector from './SizeSelector';
+import { getNextHint, analyzeCellDetails } from '../lib/dynamicGuidedSolver';
+import { generatePuzzle, createEmptyBoard, getAllConflicts } from '../lib/dynamicSolver';
 import { toast } from '../hooks/use-toast';
 
 const Brain = ({ className }) => (
@@ -33,12 +34,33 @@ const Brain = ({ className }) => (
 );
 
 const GuidedMode = ({ onBack }) => {
+  const [size, setSize] = useState(9);
+  const [showSizeSelector, setShowSizeSelector] = useState(true);
   const [grid, setGrid] = useState(
     Array(9).fill(null).map(() => Array(9).fill(0))
   );
   const [selectedCell, setSelectedCell] = useState(null);
   const [hint, setHint] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [hasConflicts, setHasConflicts] = useState(false);
+
+  // Check for conflicts whenever grid changes
+  useEffect(() => {
+    const conflicts = getAllConflicts(grid, size);
+    setHasConflicts(conflicts.size > 0);
+  }, [grid, size]);
+
+  const handleSizeSelect = (selectedSize) => {
+    setSize(selectedSize);
+    setGrid(createEmptyBoard(selectedSize));
+    setHint(null);
+    setSelectedCell(null);
+    setShowSizeSelector(false);
+    toast({
+      title: `🎯 ${selectedSize}×${selectedSize} Grid Selected`,
+      description: `Ready for guided solving with ${selectedSize}×${selectedSize} puzzles!`,
+    });
+  };
 
   const handleCellChange = (row, col, value) => {
     const newGrid = grid.map(r => [...r]);
@@ -48,13 +70,22 @@ const GuidedMode = ({ onBack }) => {
   };
 
   const handleGetHint = async () => {
+    if (hasConflicts) {
+      toast({
+        title: "❌ Cannot Provide Hint",
+        description: "Please resolve duplicate numbers first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       // Add a small delay for UX
       await new Promise(resolve => setTimeout(resolve, 400));
       
-      const hintResult = getNextHint(grid);
+      const hintResult = getNextHint(grid, size);
       
       if (hintResult.row !== null && hintResult.col !== null) {
         setSelectedCell({ row: hintResult.row, col: hintResult.col });
@@ -95,24 +126,34 @@ const GuidedMode = ({ onBack }) => {
   };
 
   const handleReset = () => {
-    setGrid(Array(9).fill(null).map(() => Array(9).fill(0)));
+    setGrid(createEmptyBoard(size));
     setHint(null);
     setSelectedCell(null);
   };
 
   const handleGeneratePuzzle = () => {
-    const newPuzzle = generatePuzzle('easy');
+    const newPuzzle = generatePuzzle(size, 'easy');
     setGrid(newPuzzle);
     setHint(null);
     setSelectedCell(null);
     toast({
       title: "🎲 Practice Puzzle Generated",
-      description: "Try solving this easy puzzle with guided hints!",
+      description: `Try solving this ${size}×${size} easy puzzle with guided hints!`,
     });
+  };
+
+  const handleChangeSize = () => {
+    setShowSizeSelector(true);
   };
 
   return (
     <div className="guided-mode-container">
+      <SizeSelector 
+        open={showSizeSelector} 
+        onOpenChange={setShowSizeSelector}
+        onSelectSize={handleSizeSelect}
+      />
+
       <div className="guided-header">
         <Button
           variant="ghost"
@@ -128,17 +169,28 @@ const GuidedMode = ({ onBack }) => {
         <CardHeader>
           <CardTitle className="guided-title">
             <Brain className="inline-block mr-2 h-6 w-6 text-amber-400 align-middle" />
-            Guided Mode
+            Guided Mode ({size}×{size})
           </CardTitle>
           <p className="guided-description">
             Enter your puzzle and get step-by-step hints with logical reasoning
           </p>
         </CardHeader>
         <CardContent>
+          {hasConflicts && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                ⚠️ <strong>Duplicate numbers detected!</strong> Red highlighted cells have conflicts. Please correct them to get hints.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <SudokuGrid
             grid={grid}
             onCellChange={handleCellChange}
             highlightCell={selectedCell}
+            size={size}
+            showConflicts={true}
           />
 
           <div className="guided-actions">
@@ -180,6 +232,16 @@ const GuidedMode = ({ onBack }) => {
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               Reset
+            </Button>
+
+            <Button
+              onClick={handleChangeSize}
+              variant="outline"
+              className="change-size-button"
+              size="lg"
+              disabled={loading}
+            >
+              Change Size
             </Button>
           </div>
 

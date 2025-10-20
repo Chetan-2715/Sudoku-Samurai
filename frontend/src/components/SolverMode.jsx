@@ -1,17 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Wand2, RotateCcw, Sparkles } from 'lucide-react';
+import { Alert, AlertDescription } from './ui/alert';
+import { ArrowLeft, Wand2, RotateCcw, Sparkles, AlertTriangle } from 'lucide-react';
 import SudokuGrid from './SudokuGrid';
-import { solve, generatePuzzle } from '../lib/solver';
+import SizeSelector from './SizeSelector';
+import { solve, generatePuzzle, createEmptyBoard, getAllConflicts } from '../lib/dynamicSolver';
 import { toast } from '../hooks/use-toast';
 
 const SolverMode = ({ onBack }) => {
+  const [size, setSize] = useState(9);
+  const [showSizeSelector, setShowSizeSelector] = useState(true);
   const [grid, setGrid] = useState(
     Array(9).fill(null).map(() => Array(9).fill(0))
   );
   const [solving, setSolving] = useState(false);
   const [solved, setSolved] = useState(false);
+  const [hasConflicts, setHasConflicts] = useState(false);
+
+  // Check for conflicts whenever grid changes
+  useEffect(() => {
+    const conflicts = getAllConflicts(grid, size);
+    setHasConflicts(conflicts.size > 0);
+  }, [grid, size]);
+
+  const handleSizeSelect = (selectedSize) => {
+    setSize(selectedSize);
+    setGrid(createEmptyBoard(selectedSize));
+    setSolved(false);
+    setShowSizeSelector(false);
+    toast({
+      title: `🎯 ${selectedSize}×${selectedSize} Grid Selected`,
+      description: `Ready to solve ${selectedSize}×${selectedSize} puzzles!`,
+    });
+  };
 
   const handleCellChange = (row, col, value) => {
     const newGrid = grid.map(r => [...r]);
@@ -21,13 +43,22 @@ const SolverMode = ({ onBack }) => {
   };
 
   const handleSolve = async () => {
+    if (hasConflicts) {
+      toast({
+        title: "❌ Cannot Solve",
+        description: "Please resolve duplicate numbers before solving.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSolving(true);
 
     try {
       // Add a small delay for UX (shows solving animation)
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const result = solve(grid);
+      const result = solve(grid, size);
 
       if (result.success) {
         setGrid(result.solution);
@@ -55,22 +86,33 @@ const SolverMode = ({ onBack }) => {
   };
 
   const handleReset = () => {
-    setGrid(Array(9).fill(null).map(() => Array(9).fill(0)));
+    setGrid(createEmptyBoard(size));
     setSolved(false);
   };
 
   const handleGeneratePuzzle = () => {
-    const newPuzzle = generatePuzzle('medium');
+    const difficulty = size === 3 ? 'easy' : 'medium';
+    const newPuzzle = generatePuzzle(size, difficulty);
     setGrid(newPuzzle);
     setSolved(false);
     toast({
       title: "🎲 New Puzzle Generated",
-      description: "Try solving this medium difficulty puzzle!",
+      description: `Try solving this ${size}×${size} ${difficulty} puzzle!`,
     });
+  };
+
+  const handleChangeSize = () => {
+    setShowSizeSelector(true);
   };
 
   return (
     <div className="solver-mode-container">
+      <SizeSelector 
+        open={showSizeSelector} 
+        onOpenChange={setShowSizeSelector}
+        onSelectSize={handleSizeSelect}
+      />
+
       <div className="solver-header">
         <Button
           variant="ghost"
@@ -86,15 +128,26 @@ const SolverMode = ({ onBack }) => {
         <CardHeader>
           <CardTitle className="solver-title">
             <Bot className="inline-block mr-2 h-6 w-6 text-cyan-400 align-middle" />
-            Solve with the Bot
+            Solve with the Bot ({size}×{size})
           </CardTitle>
           <p className="solver-description">Enter your Sudoku puzzle numbers below and let the AI samurai solve it instantly</p>
         </CardHeader>
         <CardContent>
+          {hasConflicts && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                ⚠️ <strong>Duplicate numbers detected!</strong> Red highlighted cells have conflicts in their row, column, or box. Please correct them before solving.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <SudokuGrid
             grid={grid}
             onCellChange={handleCellChange}
             readOnly={solved}
+            size={size}
+            showConflicts={true}
           />
 
           <div className="solver-actions">
@@ -136,6 +189,16 @@ const SolverMode = ({ onBack }) => {
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               Reset
+            </Button>
+
+            <Button
+              onClick={handleChangeSize}
+              variant="outline"
+              className="change-size-button"
+              size="lg"
+              disabled={solving}
+            >
+              Change Size
             </Button>
           </div>
         </CardContent>
