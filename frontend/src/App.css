@@ -400,7 +400,7 @@
 }
 
 .sudoku-grid {
-  display: inline-block;
+  display: grid;
   border: 3px solid #ffd700;
   border-radius: 8px;
   overflow: hidden;
