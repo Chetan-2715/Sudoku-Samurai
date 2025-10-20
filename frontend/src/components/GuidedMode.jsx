@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { ArrowLeft, Lightbulb, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { ArrowLeft, Lightbulb, RotateCcw, CheckCircle2, Sparkles, Info } from 'lucide-react';
 import SudokuGrid from './SudokuGrid';
-import { mockGetHint } from '../mock';
+import { getNextHint, analyzeCellDetails } from '../lib/guidedSolver';
+import { generatePuzzle } from '../lib/solver';
+import { toast } from '../hooks/use-toast';
 
 const Brain = ({ className }) => (
   <svg
@@ -45,38 +48,36 @@ const GuidedMode = ({ onBack }) => {
   };
 
   const handleGetHint = async () => {
-    // Find first empty cell
-    let emptyCell = null;
-    for (let i = 0; i < 9; i++) {
-      for (let j = 0; j < 9; j++) {
-        if (grid[i][j] === 0) {
-          emptyCell = { row: i, col: j };
-          break;
-        }
-      }
-      if (emptyCell) break;
-    }
-
-    if (!emptyCell) {
-      setHint({
-        number: null,
-        reasoning: "Congratulations! Your Sudoku is complete. Check if all numbers are correctly placed."
-      });
-      return;
-    }
-
     setLoading(true);
-    setSelectedCell(emptyCell);
 
     try {
-      const result = await mockGetHint(grid, emptyCell.row, emptyCell.col);
-      if (result.success) {
-        setHint(result.hint);
+      // Add a small delay for UX
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      const hintResult = getNextHint(grid);
+      
+      if (hintResult.row !== null && hintResult.col !== null) {
+        setSelectedCell({ row: hintResult.row, col: hintResult.col });
+        setHint({
+          number: hintResult.number,
+          reasoning: hintResult.reasoning,
+          technique: hintResult.technique,
+          candidates: hintResult.candidates
+        });
+      } else {
+        // Puzzle is complete or has errors
+        setSelectedCell(null);
+        setHint({
+          number: null,
+          reasoning: hintResult.reasoning,
+          technique: hintResult.technique
+        });
       }
     } catch (error) {
       setHint({
         number: null,
-        reasoning: "Error getting hint. Please try again."
+        reasoning: "Error getting hint: " + error.message,
+        technique: 'Error'
       });
     } finally {
       setLoading(false);
@@ -97,6 +98,17 @@ const GuidedMode = ({ onBack }) => {
     setGrid(Array(9).fill(null).map(() => Array(9).fill(0)));
     setHint(null);
     setSelectedCell(null);
+  };
+
+  const handleGeneratePuzzle = () => {
+    const newPuzzle = generatePuzzle('easy');
+    setGrid(newPuzzle);
+    setHint(null);
+    setSelectedCell(null);
+    toast({
+      title: "🎲 Practice Puzzle Generated",
+      description: "Try solving this easy puzzle with guided hints!",
+    });
   };
 
   return (
@@ -150,6 +162,17 @@ const GuidedMode = ({ onBack }) => {
             </Button>
 
             <Button
+              onClick={handleGeneratePuzzle}
+              variant="secondary"
+              className="generate-button"
+              size="lg"
+              disabled={loading}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Practice Puzzle
+            </Button>
+
+            <Button
               onClick={handleReset}
               variant="outline"
               className="reset-button"
@@ -164,10 +187,23 @@ const GuidedMode = ({ onBack }) => {
             <Alert className="hint-alert">
               <Lightbulb className="h-4 w-4" />
               <AlertDescription className="hint-content">
+                {hint.technique && (
+                  <div className="hint-technique-container" style={{ marginBottom: '12px' }}>
+                    <Badge variant="outline" className="technique-badge">
+                      <Info className="mr-1 h-3 w-3" />
+                      {hint.technique}
+                    </Badge>
+                  </div>
+                )}
                 {hint.number && (
                   <div className="hint-number-container">
                     <span className="hint-label">Suggested Number:</span>
                     <span className="hint-number">{hint.number}</span>
+                  </div>
+                )}
+                {hint.candidates && hint.candidates.length > 0 && (
+                  <div style={{ marginTop: '8px', marginBottom: '8px', fontSize: '0.875rem', color: '#94a3b8' }}>
+                    <strong>Possible values:</strong> {hint.candidates.join(', ')}
                   </div>
                 )}
                 <p className="hint-reasoning">{hint.reasoning}</p>

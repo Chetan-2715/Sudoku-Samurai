@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ArrowLeft, Wand2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Wand2, RotateCcw, Sparkles } from 'lucide-react';
 import SudokuGrid from './SudokuGrid';
-import { mockSolveSudoku } from '../mock';
+import { solve, generatePuzzle } from '../lib/solver';
 import { toast } from '../hooks/use-toast';
 
 const SolverMode = ({ onBack }) => {
@@ -24,20 +24,29 @@ const SolverMode = ({ onBack }) => {
     setSolving(true);
 
     try {
-      const result = await mockSolveSudoku(grid);
+      // Add a small delay for UX (shows solving animation)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const result = solve(grid);
 
       if (result.success) {
         setGrid(result.solution);
         setSolved(true);
         toast({
-          title: "Puzzle Solved!",
+          title: "✅ Puzzle Solved!",
           description: result.message,
+        });
+      } else {
+        toast({
+          title: "❌ Unable to Solve",
+          description: result.message,
+          variant: "destructive"
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to solve the puzzle",
+        description: "Failed to solve the puzzle: " + error.message,
         variant: "destructive"
       });
     } finally {
@@ -48,6 +57,16 @@ const SolverMode = ({ onBack }) => {
   const handleReset = () => {
     setGrid(Array(9).fill(null).map(() => Array(9).fill(0)));
     setSolved(false);
+  };
+
+  const handleGeneratePuzzle = () => {
+    const newPuzzle = generatePuzzle('medium');
+    setGrid(newPuzzle);
+    setSolved(false);
+    toast({
+      title: "🎲 New Puzzle Generated",
+      description: "Try solving this medium difficulty puzzle!",
+    });
   };
 
   return (
@@ -96,6 +115,17 @@ const SolverMode = ({ onBack }) => {
                   Solve Puzzle
                 </>
               )}
+            </Button>
+
+            <Button
+              onClick={handleGeneratePuzzle}
+              variant="secondary"
+              className="generate-button"
+              size="lg"
+              disabled={solving}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Generate Puzzle
             </Button>
 
             <Button
