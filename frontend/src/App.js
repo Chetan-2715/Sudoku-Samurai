@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import { Toaster } from './components/ui/toaster';
 import LandingAnimation from './components/LandingAnimation';
@@ -9,6 +9,10 @@ import GuidedMode from './components/GuidedMode';
 function App() {
   const [currentView, setCurrentView] = useState('landing');
   const [selectedMode, setSelectedMode] = useState(null);
+
+  useEffect(() => {
+    console.log("✅ App Component Mounted");
+  }, []);
 
   const handleGetStarted = () => {
     setCurrentView('modeSelection');
@@ -49,7 +53,6 @@ function App() {
       {currentView === 'game' && selectedMode === 'guided' && (
         <GuidedMode onBack={handleBackToModes} />
       )}
-
 
       <Toaster />
     </div>

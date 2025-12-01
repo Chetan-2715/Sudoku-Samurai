@@ -4,7 +4,9 @@
     {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "build" }
+      "config": {
+        "distDir": "build"
+      }
     },
     {
       "src": "backend/server.py",
@@ -12,7 +14,13 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/backend/server.py" },
-    { "source": "/(.*)", "destination": "/frontend/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/backend/server.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

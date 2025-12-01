@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Button } from './ui/button';
-import { Grid3x3, Grid2X2, LayoutGrid } from 'lucide-react';
+import { Grid3x3, Grid2x2, LayoutGrid } from 'lucide-react';
 
 const SizeSelector = ({ open, onOpenChange, onSelectSize }) => {
   const sizes = [
@@ -15,7 +15,7 @@ const SizeSelector = ({ open, onOpenChange, onSelectSize }) => {
       value: 3,
       label: '3×3 Mini',
       description: 'Perfect for beginners',
-      icon: Grid2X2,
+      icon: Grid2x2,
       difficulty: 'Very Easy',
       color: 'text-green-400'
     },
@@ -53,7 +53,7 @@ const SizeSelector = ({ open, onOpenChange, onSelectSize }) => {
             Select the Sudoku board size you'd like to play
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           {sizes.map((size) => {
             const Icon = size.icon;
